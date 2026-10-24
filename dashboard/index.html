@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>DriveGuard AI Dashboard</title>
+<style>
+:root{--bg:#070d17;--card:#0e1a2b;--line:#1d3a57;--cy:#38bdf8;--tx:#e6f1ff;--mut:#8aa4bf;--ok:#34d399;--warn:#fb923c;--bad:#f87171}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);font-family:system-ui,sans-serif;padding:24px;max-width:1000px;margin:auto}
+h1{font-size:28px;margin:0}h1 span{color:var(--cy)}.sub{color:var(--mut);margin:4px 0 20px}
+select,button{background:var(--card);color:var(--tx);border:1px solid var(--line);padding:8px 12px;border-radius:8px;font-size:14px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-top:16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px}
+.card small{color:var(--mut);display:block;margin-bottom:6px;text-transform:uppercase;font-size:11px;letter-spacing:.06em}
+.big{font-size:30px;font-weight:700}.LOW{color:var(--ok)}.MEDIUM{color:var(--warn)}.HIGH{color:var(--bad)}
+.alert{color:var(--warn);margin:4px 0}.status{float:right;color:var(--ok);font-weight:600}
+</style></head><body>
+<h1>DriveGuard <span>AI</span><span class="status" id="st">● ACTIVE</span></h1>
+<div class="sub">See ahead. Think ahead. Protect ahead.</div>
+<select id="sc"></select> <button onclick="load()">Run scenario</button>
+<div class="grid">
+ <div class="card"><small>Risk</small><div class="big" id="risk">-</div><div id="lvl"></div></div>
+ <div class="card"><small>Time to impact</small><div class="big" id="tti">-</div></div>
+ <div class="card"><small>Speed</small><div class="big" id="spd">-</div></div>
+ <div class="card"><small>Road grip</small><div class="big" id="grip">-</div></div>
+ <div class="card"><small>Stopping distance</small><div class="big" id="stop">-</div></div>
+ <div class="card"><small>Weather</small><div class="big" id="wx">-</div></div>
+</div>
+<div class="grid"><div class="card" style="grid-column:1/-1"><small>System action</small><div class="big" id="act" style="font-size:20px">-</div><div id="alerts"></div></div>
+<div class="card" style="grid-column:1/-1"><small>Safest route</small><div id="route">-</div></div></div>
+<script>
+const $=id=>document.getElementById(id);
+async function init(){const l=await (await fetch('/api/scenarios')).json();
+ $('sc').innerHTML=l.map(s=>`<option>${s}</option>`).join('');load();route();}
+async function load(){const d=await (await fetch('/api/evaluate?scenario='+$('sc').value)).json();const r=d.report;
+ $('risk').textContent=r.risk_pct+'%';$('lvl').textContent=r.level;$('lvl').className=r.level;$('risk').className='big '+r.level;
+ $('tti').textContent=r.time_to_impact_s==null?'—':r.time_to_impact_s+' s';
+ $('spd').textContent=Math.round(d.state.speed_kmh)+' km/h';$('grip').textContent=Math.round(r.grip*100)+'%';
+ $('stop').textContent=r.stopping_distance_m+' m';$('wx').textContent=d.state.weather.condition.replace('_',' ');
+ $('act').textContent=r.action;$('alerts').innerHTML=r.alerts.map(a=>`<div class="alert">⚠ ${a}</div>`).join('');}
+async function route(){const r=await (await fetch('/api/route')).json();
+ $('route').textContent=r.path.join(' → ')+`  (${r.minutes} min, avg risk ${r.avg_risk})`;}
+init();
+</script></body></html>
